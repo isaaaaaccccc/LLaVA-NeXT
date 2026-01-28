@@ -16,17 +16,24 @@ def build_vision_tower(config, delay_load=False, **kwargs):
 
     tower_type = getattr(config, "mm_vision_tower_type", None) or getattr(config, "vision_tower_type", None)
 
-    # Normalize
     if isinstance(tower_type, str):
         tower_type = tower_type.lower()
 
-    # Prefer explicit type
+    # Resolve relative local paths safely
+    if isinstance(vision_tower, str):
+        if os.path.exists(vision_tower):
+            vision_tower = os.path.abspath(vision_tower)
+        else:
+            rel = os.path.join(os.path.dirname(__file__), "..", "..", vision_tower)
+            rel = os.path.abspath(rel)
+            if os.path.exists(rel):
+                vision_tower = rel
+
     if tower_type == "siglip":
         return SigLipVisionTower(vision_tower, vision_tower_cfg=vision_tower_cfg, delay_load=delay_load, **kwargs)
 
-    # Heuristic fallback: path/name contains "siglip"
     if isinstance(vision_tower, str) and "siglip" in vision_tower.lower():
         return SigLipVisionTower(vision_tower, vision_tower_cfg=vision_tower_cfg, delay_load=delay_load, **kwargs)
 
-    # Default: CLIP
     return CLIPVisionTower(vision_tower, args=vision_tower_cfg, delay_load=delay_load, **kwargs)
+
